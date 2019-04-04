@@ -4,8 +4,10 @@ import logging
 import logging.config
 import os
 import re
-import requests
-import time
+import pandas_datareader.data as web
+from datetime import datetime
+from datetime import timedelta
+
 
 MY_PATH = os.path.abspath(os.path.dirname(__file__))
 logging.config.fileConfig(os.path.join(MY_PATH, 'logging.conf'))
@@ -19,7 +21,7 @@ class Prices(object):
         self.high = []
         self.low = []
 
-        for k, v in self.price_data.iteritems():
+        for k, v in self.price_data.items():
             self.open.append(v["open"])
             self.close.append(v["close"])
             self.high.append(v["high"])
@@ -29,41 +31,21 @@ class Prices(object):
     def load_historical_prices(self, ticker, start_date=None):
         logging.info("Getting historical prices for {}".format(ticker))
 
-        if (start_date is not None and
-                re.match("^\d{1,2}/\d{1,2}/\d{4}", start_date) is not None):
-            (month, day, year) = start_date.split("/")
-        else:
-            (month, day, year) = time.strftime("%m/%d/%Y").split("/")
-        num_month = int(month.lstrip("0"))
-        num_day = int(day.lstrip("0"))
-        num_year = int(year)
-        pre_year = num_year - 2
-        url = "http://ichart.yahoo.com/table.csv?s=%(ticker)s" \
-            "&a=%(month)d&b=%(day)d&c=%(startyear)s&d=%(month)d" \
-            "&e=%(day)d&f=%(endyear)s"
-
-        req = url % ({"ticker": ticker, "month": num_month, "day":
-                      num_day, "startyear": pre_year, "endyear": num_year})
-
-        logging.debug("REQUEST: {}".format(req))
-        res = requests.get(req)
-
-        # Format 'Date,Open,High,Low,Close,Volume,Adj Close'
-        prices = res.content.split("\n")[1:]
+        # To simplify, get year's worth of prices
+        end = datetime.now()
+        start = end + timedelta(days=-365)
+        data = web.DataReader(ticker.upper(), 'iex', start, end).to_dict()
 
         price_data = {}
 
-        for date_info in reversed(prices):
-            a = date_info.split(",")
+        keys = data.get("open").keys()
 
-            if len(a) < 5:
-                continue
-
-            price_data[a[0]] = {
-                "open": round(float(a[1]),2),
-                "high": round(float(a[2]), 2),
-                "low": round(float(a[3]), 2),
-                "close": round(float(a[4]), 2)
+        for date in keys:
+            price_data[date] = {
+                "open": data.get("open").get(date),
+                "high": data.get("high").get(date),
+                "low": data.get("low").get(date),
+                "close": data.get("close").get(date)
             }
 
         return price_data

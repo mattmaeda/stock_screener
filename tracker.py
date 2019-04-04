@@ -48,7 +48,7 @@ def load_screens():
                                                          'SCREEN').get("name")))
                 modules.append(mod)
 
-            except ImportError, ie:
+            except ImportError as ie:
                 logging.info("Ignoring ImportError {}".format(ie.message))
 
     return modules
@@ -108,7 +108,7 @@ if __name__ == "__main__":
     logging.info("Tickers Screened: {}".format(", ".join(tickers)))
     logging.info("Start Date: {}".format(start_date))
 
-    for k, v in results.iteritems():
+    for k, v in results.items():
         logging.info("")
         logging.info("*" * 75)
         logging.info("***** {} *****".format(k))
